@@ -1,8 +1,11 @@
 use bevy::prelude::*;
 
+mod source;
 mod state;
+mod tasks;
 mod ui;
 
+use source::SourcePlugin;
 use state::AppState;
 use ui::UiPlugin;
 
@@ -17,6 +20,6 @@ fn main() {
             ..default()
         }))
         .init_state::<AppState>()
-        .add_plugins(UiPlugin)
+        .add_plugins((UiPlugin, SourcePlugin))
         .run();
 }
