@@ -24,6 +24,17 @@ impl VolumeSource for GeoTiffSource {
             .get_tag_f64_vec(Tag::ModelTiepointTag)
             .context("ModelTiepointTag missing or non-numeric")?;
 
+        let samples = decoder
+            .get_tag_u64(Tag::SamplesPerPixel)
+            .unwrap_or(1);
+        if samples != 1 {
+            anyhow::bail!(
+                "{} samples/pixel — only single-band elevation rasters are supported \
+                (RGB/RGBA orthophotos are out of scope)",
+                samples
+            );
+        }
+
         let image = decoder.read_image().context("read tiff image data")?;
         let expected = (width as usize)
             .checked_mul(height as usize)

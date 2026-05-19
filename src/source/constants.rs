@@ -1,5 +1,3 @@
-pub const TEST_GEOTIFF_PATH: &str = "assets/test.tif";
-
 // SRTM-derived int16 GeoTIFFs use -32768 as the NODATA sentinel. Cast to f32
 // then compare exactly — the value is integral so float compare is safe.
 pub const GEOTIFF_NODATA_SRTM: f32 = -32768.0;

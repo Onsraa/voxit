@@ -4,6 +4,8 @@ use crate::state::AppState;
 
 pub mod components;
 pub mod constants;
+pub mod load_screen;
+pub mod progress;
 pub mod resources;
 pub mod systems;
 
@@ -11,14 +13,17 @@ pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, systems::spawn_camera_and_label)
-            .add_systems(
-                Update,
-                (systems::debug_state_keys, systems::update_label_text),
-            )
-            .add_systems(OnEnter(AppState::Previewing), systems::hide_ui_root)
-            .add_systems(OnEnter(AppState::Exporting), systems::hide_ui_root)
-            .add_systems(OnEnter(AppState::Idle), systems::show_ui_root)
-            .add_systems(OnEnter(AppState::Loading), systems::show_ui_root);
+        app.add_systems(
+            Update,
+            (load_screen::handle_drag_drop, load_screen::handle_dialog_pick),
+        )
+        .add_systems(
+            Update,
+            load_screen::idle_screen.run_if(in_state(AppState::Idle)),
+        )
+        .add_systems(
+            Update,
+            progress::loading_screen.run_if(in_state(AppState::Loading)),
+        );
     }
 }

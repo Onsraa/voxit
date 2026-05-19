@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use bevy::prelude::*;
@@ -44,14 +44,21 @@ pub trait VolumeSource {
     fn palette_preset() -> Palette;
 }
 
+#[derive(Event, Debug, Clone)]
+pub struct LoadRequested {
+    pub path: PathBuf,
+}
+
 pub struct SourcePlugin;
 
 impl Plugin for SourcePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, systems::kick_off_test_load)
-            .add_systems(
-                Update,
+        app.add_event::<LoadRequested>().add_systems(
+            Update,
+            (
+                systems::handle_load_requests.run_if(in_state(AppState::Idle)),
                 systems::poll_parse_task.run_if(in_state(AppState::Loading)),
-            );
+            ),
+        );
     }
 }

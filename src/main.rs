@@ -1,4 +1,6 @@
 use bevy::prelude::*;
+use bevy_egui::EguiPlugin;
+use bevy_file_dialog::prelude::*;
 
 mod classify;
 mod render;
@@ -12,6 +14,7 @@ mod volume;
 use render::RenderPlugin;
 use source::SourcePlugin;
 use state::AppState;
+use ui::load_screen::VolumeFilePicker;
 use ui::UiPlugin;
 
 fn main() {
@@ -25,6 +28,8 @@ fn main() {
             ..default()
         }))
         .init_state::<AppState>()
+        .add_plugins(EguiPlugin)
+        .add_plugins(FileDialogPlugin::new().with_pick_file::<VolumeFilePicker>())
         .add_plugins((UiPlugin, SourcePlugin, RenderPlugin))
         .run();
 }

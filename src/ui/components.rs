@@ -1,7 +1,1 @@
-use bevy::prelude::*;
-
-#[derive(Component)]
-pub struct StateLabel;
-
-#[derive(Component)]
-pub struct UiRoot;
+// Phase 4: no marker components yet — egui handles its own UI state.

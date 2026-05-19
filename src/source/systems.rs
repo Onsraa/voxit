@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use bevy::prelude::*;
 use bevy::tasks::futures_lite::future;
 
@@ -7,19 +5,39 @@ use crate::state::AppState;
 use crate::tasks::spawn_async;
 
 use super::components::ParseTask;
-use super::constants::TEST_GEOTIFF_PATH;
 use super::geotiff::GeoTiffSource;
-use super::{RawVolume, VolumeSource};
+use super::{LoadRequested, RawVolume, VolumeSource};
 
-pub fn kick_off_test_load(mut commands: Commands, mut next_state: ResMut<NextState<AppState>>) {
-    let path = PathBuf::from(TEST_GEOTIFF_PATH);
-    if !path.exists() {
-        info!(
-            "test GeoTIFF not present at {} — staying in Idle. Drop a .tif at that path to load.",
-            path.display()
-        );
+pub fn handle_load_requests(
+    mut commands: Commands,
+    mut events: EventReader<LoadRequested>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    let Some(ev) = events.read().next() else {
         return;
+    };
+    let path = ev.path.clone();
+    events.clear();
+
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("tif") | Some("tiff") => {}
+        Some("dcm") => {
+            warn!(
+                "DICOM not yet supported (Phase 8); ignoring {}",
+                path.display()
+            );
+            return;
+        }
+        _ => {
+            warn!("unsupported extension on {}", path.display());
+            return;
+        }
     }
+
     info!("loading GeoTIFF from {}", path.display());
     next_state.set(AppState::Loading);
     let task = spawn_async(move || GeoTiffSource::parse(&path));

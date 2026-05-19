@@ -1,1 +1,2 @@
-// Phase 1: no UI-owned resources yet. AppState lives in `crate::state`.
+// Phase 4: no UI resources yet. LoadProgress lives with the source plugin
+// when a parser actually reports incremental progress.
