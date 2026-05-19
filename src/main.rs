@@ -1,10 +1,15 @@
 use bevy::prelude::*;
 
+mod classify;
+mod render;
 mod source;
 mod state;
 mod tasks;
 mod ui;
+mod visibility;
+mod volume;
 
+use render::RenderPlugin;
 use source::SourcePlugin;
 use state::AppState;
 use ui::UiPlugin;
@@ -20,6 +25,6 @@ fn main() {
             ..default()
         }))
         .init_state::<AppState>()
-        .add_plugins((UiPlugin, SourcePlugin))
+        .add_plugins((UiPlugin, SourcePlugin, RenderPlugin))
         .run();
 }

@@ -2,27 +2,36 @@ use bevy::prelude::*;
 
 use crate::state::AppState;
 
-use super::components::StateLabel;
+use super::components::{StateLabel, UiRoot};
 use super::constants::{
-    BACKGROUND_COLOR, STATE_TEXT_COLOR, STATE_TEXT_EXPORTING, STATE_TEXT_FONT_SIZE,
-    STATE_TEXT_IDLE, STATE_TEXT_LOADING, STATE_TEXT_PREVIEWING,
+    STATE_TEXT_COLOR, STATE_TEXT_EXPORTING, STATE_TEXT_FONT_SIZE, STATE_TEXT_IDLE,
+    STATE_TEXT_LOADING, STATE_TEXT_PREVIEWING,
 };
 
 pub fn spawn_camera_and_label(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle {
+        camera: Camera {
+            order: 1,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
+        ..default()
+    });
 
     commands
-        .spawn(NodeBundle {
-            style: Style {
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
                 ..default()
             },
-            background_color: BACKGROUND_COLOR.into(),
-            ..default()
-        })
+            UiRoot,
+        ))
         .with_children(|parent| {
             parent.spawn((
                 TextBundle::from_section(
@@ -36,6 +45,18 @@ pub fn spawn_camera_and_label(mut commands: Commands) {
                 StateLabel,
             ));
         });
+}
+
+pub fn hide_ui_root(mut q: Query<&mut Visibility, With<UiRoot>>) {
+    for mut v in &mut q {
+        *v = Visibility::Hidden;
+    }
+}
+
+pub fn show_ui_root(mut q: Query<&mut Visibility, With<UiRoot>>) {
+    for mut v in &mut q {
+        *v = Visibility::Inherited;
+    }
 }
 
 pub fn update_label_text(
