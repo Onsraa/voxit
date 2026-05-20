@@ -9,14 +9,8 @@ bevy_egui            = "0.28"
 bevy_panorbit_camera = "0.19"
 bevy_file_dialog     = "0.6"
 
-dicom                = "0.7"
-dicom-pixeldata      = "0.7"
 tiff                 = "0.9"
-
 dot_vox              = "5"
-
-ndarray              = "0.15"
-image                = "0.25"
 bitvec               = "1"
 anyhow               = "1"
 

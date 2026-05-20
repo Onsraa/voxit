@@ -23,7 +23,7 @@ pub fn idle_screen(mut contexts: EguiContexts, mut commands: Commands) {
             ui.add_space(CARD_PADDING_TOP);
             ui.vertical_centered(|ui| {
                 ui.label(
-                    egui::RichText::new("voxel-viewer")
+                    egui::RichText::new("voxit")
                         .color(CARD_HEADING)
                         .size(HEADING_SIZE),
                 );
@@ -34,13 +34,11 @@ pub fn idle_screen(mut contexts: EguiContexts, mut commands: Commands) {
                         .size(SUBTEXT_SIZE),
                 );
                 ui.add_space(VERTICAL_GAP_BIG);
-                let btn = ui.add(
-                    egui::Button::new(
-                        egui::RichText::new("Open File…").size(BUTTON_TEXT_SIZE),
-                    )
-                    .min_size(egui::vec2(180.0, 40.0)),
+                let file_btn = ui.add(
+                    egui::Button::new(egui::RichText::new("Open File…").size(BUTTON_TEXT_SIZE))
+                        .min_size(egui::vec2(180.0, 40.0)),
                 );
-                if btn.clicked() {
+                if file_btn.clicked() {
                     commands
                         .dialog()
                         .add_filter("GeoTIFF", &["tif", "tiff"])

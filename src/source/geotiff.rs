@@ -5,7 +5,7 @@ use tiff::decoder::{Decoder, DecodingResult};
 use tiff::tags::Tag;
 
 use super::constants::{BIOME_PALETTE, GEOTIFF_NODATA_SRTM};
-use super::{Palette, RawVolume, SourceKind, ThresholdConfig, VolumeSource};
+use super::{Palette, RawVolume, ThresholdConfig, VolumeSource};
 
 pub struct GeoTiffSource;
 
@@ -63,7 +63,6 @@ impl VolumeSource for GeoTiffSource {
             dims: [width, height, 1],
             spacing,
             origin,
-            source_kind: SourceKind::GeoTiff,
         })
     }
 
@@ -182,7 +181,6 @@ mod tests {
             dims: [5, 1, 1],
             spacing: [1.0, 1.0, 1.0],
             origin: [0.0, 0.0, 0.0],
-            source_kind: SourceKind::GeoTiff,
         };
         let t = GeoTiffSource::default_thresholds(&volume);
         assert_eq!(t.min, -3.0);

@@ -17,13 +17,6 @@ pub struct RawVolume {
     pub dims: [u32; 3],
     pub spacing: [f32; 3],
     pub origin: [f32; 3],
-    pub source_kind: SourceKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SourceKind {
-    GeoTiff,
-    Dicom,
 }
 
 #[derive(Debug, Clone, Copy)]

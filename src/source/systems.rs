@@ -25,15 +25,11 @@ pub fn handle_load_requests(
         .map(|s| s.to_ascii_lowercase());
     match ext.as_deref() {
         Some("tif") | Some("tiff") => {}
-        Some("dcm") => {
+        _ => {
             warn!(
-                "DICOM not yet supported (Phase 8); ignoring {}",
+                "unsupported file (only .tif / .tiff): {}",
                 path.display()
             );
-            return;
-        }
-        _ => {
-            warn!("unsupported extension on {}", path.display());
             return;
         }
     }
@@ -60,7 +56,7 @@ pub fn poll_parse_task(
                 next_state.set(AppState::Previewing);
             }
             Err(e) => {
-                error!("GeoTIFF parse failed: {:#}", e);
+                error!("parse failed: {:#}", e);
                 next_state.set(AppState::Idle);
             }
         }

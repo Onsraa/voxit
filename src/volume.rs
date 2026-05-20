@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::classify::classify_band;
-use crate::source::{RawVolume, SourceKind, ThresholdConfig};
+use crate::source::{RawVolume, ThresholdConfig};
 
 #[derive(Resource, Debug)]
 pub struct VoxelGrid {
@@ -24,15 +24,13 @@ impl VoxelGrid {
     }
 }
 
-// Approx meters per raw pixel along the longest horizontal axis. Phase 5 assumes
-// EPSG:4326 (degrees) — spacing × ~111 km/deg. Projected CRS support is Phase 8+.
+// Approx meters per raw pixel along the longest horizontal axis. Phase 5
+// assumes EPSG:4326 (degrees) — spacing × ~111 km/deg. Projected CRS support
+// is post-v1 work.
 const METERS_PER_DEGREE: f32 = 111_319.0;
 
 pub fn estimate_pixel_spacing_m(raw: &RawVolume) -> f32 {
-    match raw.source_kind {
-        SourceKind::GeoTiff => (raw.spacing[0].abs() * METERS_PER_DEGREE).max(1.0),
-        SourceKind::Dicom => raw.spacing[0].abs().max(1e-3),
-    }
+    (raw.spacing[0].abs() * METERS_PER_DEGREE).max(1.0)
 }
 
 pub fn build_from_geotiff(
@@ -95,7 +93,6 @@ mod tests {
     use super::*;
 
     fn tiny_raw() -> RawVolume {
-        // 4x4 raw at ~1 arc-sec → ~30m/pixel
         RawVolume {
             data: vec![
                 0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0, 0.0, 10.0, 20.0, 30.0, 0.0, 10.0,
@@ -104,7 +101,6 @@ mod tests {
             dims: [4, 4, 1],
             spacing: [1.0 / 3600.0, 1.0 / 3600.0, 1.0],
             origin: [0.0, 0.0, 0.0],
-            source_kind: SourceKind::GeoTiff,
         }
     }
 
@@ -115,7 +111,6 @@ mod tests {
             min: 0.0,
             max: 30.0,
         };
-        // ~30m/pixel × 4 pixels ≈ 124m world extent
         let grid = build_from_geotiff(&raw, 30.0, 1.0, &thresholds);
         assert_eq!(grid.dims[0], 5);
         assert_eq!(grid.dims[2], 5);
