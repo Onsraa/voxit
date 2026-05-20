@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::state::AppState;
 
+pub mod chunk;
 pub mod components;
 pub mod constants;
 pub mod resources;

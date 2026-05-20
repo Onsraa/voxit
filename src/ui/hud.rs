@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
+use crate::export::chunk::chunks_layout;
+
 use super::resources::{PreviewSettings, PreviewStats};
 
 pub fn hud(
@@ -36,6 +38,16 @@ pub fn hud(
                         egui::RichText::new(format!("triangles: {}", stats.triangle_count))
                             .monospace()
                             .color(egui::Color32::WHITE),
+                    );
+                    let layout = chunks_layout(settings.grid_dims);
+                    let total = layout[0] * layout[1] * layout[2];
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "chunks: {} × {} × {} = {}",
+                            layout[0], layout[1], layout[2], total
+                        ))
+                        .monospace()
+                        .color(egui::Color32::WHITE),
                     );
                 });
         });
