@@ -39,6 +39,10 @@ harness = false
 name    = "volume"
 harness = false
 
+[[bench]]
+name    = "mesh"
+harness = false
+
 [profile.dev]
 opt-level = 1
 
