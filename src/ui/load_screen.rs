@@ -14,7 +14,9 @@ use super::constants::{
 pub struct VolumeFilePicker;
 
 pub fn idle_screen(mut contexts: EguiContexts, mut commands: Commands) {
-    let ctx = contexts.ctx_mut();
+    let Some(ctx) = contexts.try_ctx_mut() else {
+        return;
+    };
     egui::CentralPanel::default()
         .frame(egui::Frame::none().fill(CARD_BG))
         .show(ctx, |ui| {

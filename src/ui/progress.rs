@@ -5,7 +5,9 @@ use super::constants::{
 };
 
 pub fn loading_screen(mut contexts: EguiContexts) {
-    let ctx = contexts.ctx_mut();
+    let Some(ctx) = contexts.try_ctx_mut() else {
+        return;
+    };
     ctx.request_repaint();
     egui::CentralPanel::default()
         .frame(egui::Frame::none().fill(CARD_BG))

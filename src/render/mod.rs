@@ -17,6 +17,15 @@ impl Plugin for RenderPlugin {
         app.add_plugins(PanOrbitCameraPlugin)
             .add_systems(Startup, systems::setup_ambient)
             .add_systems(OnEnter(AppState::Previewing), systems::build_preview_on_enter)
-            .add_systems(OnExit(AppState::Previewing), systems::teardown_preview);
+            .add_systems(OnExit(AppState::Previewing), systems::teardown_preview)
+            .add_systems(
+                Update,
+                (
+                    systems::rebuild_mesh_on_dirty,
+                    systems::volume_dirty_starts_debounce,
+                    systems::rebuild_volume_after_debounce,
+                )
+                    .run_if(in_state(AppState::Previewing)),
+            );
     }
 }
