@@ -19,6 +19,7 @@ impl Plugin for UiPlugin {
             .add_event::<resources::VolumeDirty>()
             .init_resource::<resources::PreviewStats>()
             .init_resource::<resources::VolumeDebounce>()
+            .init_resource::<resources::LastLoadError>()
             .add_systems(
                 Update,
                 (load_screen::handle_drag_drop, load_screen::handle_dialog_pick),

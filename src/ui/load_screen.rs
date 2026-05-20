@@ -10,10 +10,15 @@ use super::constants::{
     BUTTON_TEXT_SIZE, CARD_BG, CARD_HEADING, CARD_PADDING_TOP, CARD_SUBTEXT, HEADING_SIZE,
     SUBTEXT_SIZE, VERTICAL_GAP_BIG, VERTICAL_GAP_SMALL,
 };
+use super::resources::LastLoadError;
 
 pub struct VolumeFilePicker;
 
-pub fn idle_screen(mut contexts: EguiContexts, mut commands: Commands) {
+pub fn idle_screen(
+    mut contexts: EguiContexts,
+    mut commands: Commands,
+    last_error: Res<LastLoadError>,
+) {
     let Some(ctx) = contexts.try_ctx_mut() else {
         return;
     };
@@ -43,6 +48,14 @@ pub fn idle_screen(mut contexts: EguiContexts, mut commands: Commands) {
                         .dialog()
                         .add_filter("GeoTIFF", &["tif", "tiff"])
                         .pick_file_path::<VolumeFilePicker>();
+                }
+                if let Some(msg) = &last_error.message {
+                    ui.add_space(VERTICAL_GAP_BIG);
+                    ui.label(
+                        egui::RichText::new(format!("Last load failed: {}", msg))
+                            .color(egui::Color32::from_rgb(255, 110, 110))
+                            .size(SUBTEXT_SIZE),
+                    );
                 }
             });
         });

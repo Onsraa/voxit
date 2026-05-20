@@ -1,3 +1,4 @@
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_file_dialog::prelude::*;
@@ -30,6 +31,7 @@ fn main() {
             ..default()
         }))
         .init_state::<AppState>()
+        .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_plugins(EguiPlugin)
         .add_plugins(
             FileDialogPlugin::new()

@@ -40,3 +40,8 @@ pub struct VolumeDirty;
 pub struct VolumeDebounce {
     pub timer: Option<Timer>,
 }
+
+#[derive(Resource, Debug, Default)]
+pub struct LastLoadError {
+    pub message: Option<String>,
+}

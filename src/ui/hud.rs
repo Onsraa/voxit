@@ -1,3 +1,4 @@
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
@@ -9,6 +10,7 @@ pub fn hud(
     mut contexts: EguiContexts,
     settings: Res<PreviewSettings>,
     stats: Res<PreviewStats>,
+    diagnostics: Res<DiagnosticsStore>,
 ) {
     let Some(ctx) = contexts.try_ctx_mut() else {
         return;
@@ -48,6 +50,15 @@ pub fn hud(
                         ))
                         .monospace()
                         .color(egui::Color32::WHITE),
+                    );
+                    let fps = diagnostics
+                        .get(&FrameTimeDiagnosticsPlugin::FPS)
+                        .and_then(|d| d.smoothed())
+                        .unwrap_or(0.0);
+                    ui.label(
+                        egui::RichText::new(format!("fps: {:.0}", fps))
+                            .monospace()
+                            .color(egui::Color32::WHITE),
                     );
                 });
         });

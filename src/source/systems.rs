@@ -3,6 +3,7 @@ use bevy::tasks::futures_lite::future;
 
 use crate::state::AppState;
 use crate::tasks::spawn_async;
+use crate::ui::resources::LastLoadError;
 
 use super::components::ParseTask;
 use super::geotiff::GeoTiffSource;
@@ -12,6 +13,7 @@ pub fn handle_load_requests(
     mut commands: Commands,
     mut events: EventReader<LoadRequested>,
     mut next_state: ResMut<NextState<AppState>>,
+    mut last_error: ResMut<LastLoadError>,
 ) {
     let Some(ev) = events.read().next() else {
         return;
@@ -26,15 +28,15 @@ pub fn handle_load_requests(
     match ext.as_deref() {
         Some("tif") | Some("tiff") => {}
         _ => {
-            warn!(
-                "unsupported file (only .tif / .tiff): {}",
-                path.display()
-            );
+            let msg = format!("unsupported file (only .tif / .tiff): {}", path.display());
+            warn!("{}", msg);
+            last_error.message = Some(msg);
             return;
         }
     }
 
     info!("loading GeoTIFF from {}", path.display());
+    last_error.message = None;
     next_state.set(AppState::Loading);
     let task = spawn_async(move || GeoTiffSource::parse(&path));
     commands.spawn(ParseTask(task));
@@ -44,6 +46,7 @@ pub fn poll_parse_task(
     mut commands: Commands,
     mut tasks: Query<(Entity, &mut ParseTask)>,
     mut next_state: ResMut<NextState<AppState>>,
+    mut last_error: ResMut<LastLoadError>,
 ) {
     for (entity, mut task) in &mut tasks {
         let Some(result) = future::block_on(future::poll_once(&mut task.0)) else {
@@ -52,11 +55,14 @@ pub fn poll_parse_task(
         match result {
             Ok(volume) => {
                 log_stats(&volume);
+                last_error.message = None;
                 commands.insert_resource(volume);
                 next_state.set(AppState::Previewing);
             }
             Err(e) => {
-                error!("parse failed: {:#}", e);
+                let msg = format!("{:#}", e);
+                error!("parse failed: {}", msg);
+                last_error.message = Some(msg);
                 next_state.set(AppState::Idle);
             }
         }
