@@ -3,6 +3,7 @@ use bevy_egui::EguiPlugin;
 use bevy_file_dialog::prelude::*;
 
 mod classify;
+mod export;
 mod render;
 mod source;
 mod state;
@@ -11,6 +12,7 @@ mod ui;
 mod visibility;
 mod volume;
 
+use export::{ExportPlugin, VoxFileSaver};
 use render::RenderPlugin;
 use source::SourcePlugin;
 use state::AppState;
@@ -29,7 +31,11 @@ fn main() {
         }))
         .init_state::<AppState>()
         .add_plugins(EguiPlugin)
-        .add_plugins(FileDialogPlugin::new().with_pick_file::<VolumeFilePicker>())
-        .add_plugins((UiPlugin, SourcePlugin, RenderPlugin))
+        .add_plugins(
+            FileDialogPlugin::new()
+                .with_pick_file::<VolumeFilePicker>()
+                .with_save_file::<VoxFileSaver>(),
+        )
+        .add_plugins((UiPlugin, SourcePlugin, RenderPlugin, ExportPlugin))
         .run();
 }

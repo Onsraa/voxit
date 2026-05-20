@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts};
 
+use crate::export::ExportRequested;
+
 use super::resources::{BiomeMode, MeshDirty, PreviewSettings, VolumeDirty};
 
 const PANEL_WIDTH: f32 = 280.0;
@@ -10,6 +12,7 @@ pub fn geotiff_panel(
     mut settings: ResMut<PreviewSettings>,
     mut mesh_events: EventWriter<MeshDirty>,
     mut volume_events: EventWriter<VolumeDirty>,
+    mut export_events: EventWriter<ExportRequested>,
 ) {
     let Some(ctx) = contexts.try_ctx_mut() else {
         return;
@@ -137,6 +140,17 @@ pub fn geotiff_panel(
                 volume_events.send(VolumeDirty);
             } else if mesh_dirty {
                 mesh_events.send(MeshDirty);
+            }
+
+            ui.add_space(16.0);
+            ui.separator();
+            ui.add_space(8.0);
+            let export_btn = ui.add(
+                egui::Button::new(egui::RichText::new("Export .vox").size(16.0))
+                    .min_size(egui::vec2(ui.available_width(), 36.0)),
+            );
+            if export_btn.clicked() {
+                export_events.send(ExportRequested);
             }
         });
 }
