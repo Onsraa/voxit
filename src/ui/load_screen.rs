@@ -34,7 +34,7 @@ pub fn idle_screen(
                 );
                 ui.add_space(VERTICAL_GAP_SMALL);
                 ui.label(
-                    egui::RichText::new("Drop a .tif file anywhere on this window")
+                    egui::RichText::new("Drop a .tif, .obj, or .glb file on this window")
                         .color(CARD_SUBTEXT)
                         .size(SUBTEXT_SIZE),
                 );
@@ -47,6 +47,7 @@ pub fn idle_screen(
                     commands
                         .dialog()
                         .add_filter("GeoTIFF", &["tif", "tiff"])
+                        .add_filter("Mesh (OBJ / glTF)", &["obj", "glb", "gltf"])
                         .pick_file_path::<VolumeFilePicker>();
                 }
                 if let Some(msg) = &last_error.message {

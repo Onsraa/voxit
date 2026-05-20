@@ -7,7 +7,13 @@ use crate::ui::resources::LastLoadError;
 
 use super::components::ParseTask;
 use super::geotiff::GeoTiffSource;
-use super::{LoadRequested, RawVolume, VolumeSource};
+use super::mesh::MeshSource;
+use super::{LoadRequested, RawVolume, SourceData, VolumeSource};
+
+enum InputKind {
+    GeoTiff,
+    Mesh,
+}
 
 pub fn handle_load_requests(
     mut commands: Commands,
@@ -21,25 +27,42 @@ pub fn handle_load_requests(
     let path = ev.path.clone();
     events.clear();
 
-    let ext = path
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|s| s.to_ascii_lowercase());
-    match ext.as_deref() {
-        Some("tif") | Some("tiff") => {}
-        _ => {
-            let msg = format!("unsupported file (only .tif / .tiff): {}", path.display());
-            warn!("{}", msg);
-            last_error.message = Some(msg);
-            return;
-        }
-    }
+    let kind = classify_input(&path);
+    let Some(kind) = kind else {
+        let msg = format!(
+            "unsupported file (only .tif/.tiff/.obj/.glb/.gltf): {}",
+            path.display()
+        );
+        warn!("{}", msg);
+        last_error.message = Some(msg);
+        return;
+    };
 
-    info!("loading GeoTIFF from {}", path.display());
+    let label = match kind {
+        InputKind::GeoTiff => "GeoTIFF",
+        InputKind::Mesh => "mesh",
+    };
+    info!("loading {} from {}", label, path.display());
     last_error.message = None;
     next_state.set(AppState::Loading);
-    let task = spawn_async(move || GeoTiffSource::parse(&path));
+
+    let task = spawn_async(move || match kind {
+        InputKind::GeoTiff => GeoTiffSource::parse(&path).map(SourceData::Heightmap),
+        InputKind::Mesh => MeshSource::parse(&path).map(SourceData::Mesh),
+    });
     commands.spawn(ParseTask(task));
+}
+
+fn classify_input(path: &std::path::Path) -> Option<InputKind> {
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_ascii_lowercase());
+    match ext.as_deref() {
+        Some("tif") | Some("tiff") => Some(InputKind::GeoTiff),
+        Some("obj") | Some("glb") | Some("gltf") => Some(InputKind::Mesh),
+        _ => None,
+    }
 }
 
 pub fn poll_parse_task(
@@ -53,10 +76,10 @@ pub fn poll_parse_task(
             continue;
         };
         match result {
-            Ok(volume) => {
-                log_stats(&volume);
+            Ok(source) => {
+                log_stats(&source);
                 last_error.message = None;
-                commands.insert_resource(volume);
+                commands.insert_resource(source);
                 next_state.set(AppState::Previewing);
             }
             Err(e) => {
@@ -70,7 +93,23 @@ pub fn poll_parse_task(
     }
 }
 
-fn log_stats(v: &RawVolume) {
+fn log_stats(source: &SourceData) {
+    match source {
+        SourceData::Heightmap(v) => log_heightmap_stats(v),
+        SourceData::Mesh(m) => {
+            info!(
+                "mesh parsed: vertices={} tris={} aabb_min={:?} aabb_max={:?} texture={}",
+                m.vertices.len(),
+                m.indices.len() / 3,
+                m.aabb_min,
+                m.aabb_max,
+                m.texture.is_some()
+            );
+        }
+    }
+}
+
+fn log_heightmap_stats(v: &RawVolume) {
     let mut min = f32::INFINITY;
     let mut max = f32::NEG_INFINITY;
     let mut nan = 0usize;

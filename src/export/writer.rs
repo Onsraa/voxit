@@ -173,6 +173,7 @@ fn build_multi_model(
 mod tests {
     use super::*;
     use crate::ui::resources::{BiomeMode, PreviewSettings};
+    use crate::volume::MeshColorMode;
 
     fn synthetic_grid(dims: [u32; 3]) -> (VoxelGrid, VisibilityMask) {
         let total = (dims[0] * dims[1] * dims[2]) as usize;
@@ -207,6 +208,11 @@ mod tests {
             sea_level_m: 0.0,
             vertical_exaggeration: 1.0,
             biome_mode: BiomeMode::Elevation,
+            mesh_voxels_per_axis: 64,
+            mesh_yaw_quarters: 0,
+            mesh_pitch_quarters: 0,
+            mesh_color_mode: MeshColorMode::Auto,
+            mesh_longest_axis_m: 1.0,
         };
         let mask = VisibilityMask::compute(&grid, &settings);
         (grid, mask)

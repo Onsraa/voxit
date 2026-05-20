@@ -6,7 +6,7 @@
 use voxit::source::{RawVolume, ThresholdConfig};
 use voxit::ui::resources::{BiomeMode, PreviewSettings};
 use voxit::visibility::VisibilityMask;
-use voxit::volume::{build_from_geotiff, VoxelGrid};
+use voxit::volume::{build_from_geotiff, MeshColorMode, VoxelGrid};
 
 fn fixture() -> (VoxelGrid, PreviewSettings, VisibilityMask) {
     let side = 128_u32;
@@ -46,6 +46,11 @@ fn fixture() -> (VoxelGrid, PreviewSettings, VisibilityMask) {
         sea_level_m: 0.0,
         vertical_exaggeration: 1.0,
         biome_mode: BiomeMode::Elevation,
+        mesh_voxels_per_axis: 64,
+        mesh_yaw_quarters: 0,
+        mesh_pitch_quarters: 0,
+        mesh_color_mode: MeshColorMode::Auto,
+        mesh_longest_axis_m: 1.0,
     };
     let mask = VisibilityMask::compute(&grid, &settings);
     (grid, settings, mask)

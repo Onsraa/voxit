@@ -8,15 +8,41 @@ use crate::state::AppState;
 pub mod components;
 pub mod constants;
 pub mod geotiff;
+pub mod mesh;
 pub mod resources;
 pub mod systems;
 
-#[derive(Resource, Debug)]
+use self::mesh::MeshData;
+
+#[derive(Debug)]
 pub struct RawVolume {
     pub data: Vec<f32>,
     pub dims: [u32; 3],
     pub spacing: [f32; 3],
     pub origin: [f32; 3],
+}
+
+/// The thing that landed from a parser. Lives in the world as a Resource and
+/// the render pipeline branches on the variant.
+#[derive(Resource, Debug)]
+pub enum SourceData {
+    Heightmap(RawVolume),
+    Mesh(MeshData),
+}
+
+impl SourceData {
+    pub fn kind(&self) -> SourceKind {
+        match self {
+            SourceData::Heightmap(_) => SourceKind::Heightmap,
+            SourceData::Mesh(_) => SourceKind::Mesh,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceKind {
+    Heightmap,
+    Mesh,
 }
 
 #[derive(Debug, Clone, Copy)]

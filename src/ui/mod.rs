@@ -1,12 +1,22 @@
 use bevy::prelude::*;
 
+use crate::source::{SourceData, SourceKind};
 use crate::state::AppState;
+
+fn source_is_heightmap(source: Option<Res<SourceData>>) -> bool {
+    source.map(|s| s.kind() == SourceKind::Heightmap).unwrap_or(false)
+}
+
+fn source_is_mesh(source: Option<Res<SourceData>>) -> bool {
+    source.map(|s| s.kind() == SourceKind::Mesh).unwrap_or(false)
+}
 
 pub mod components;
 pub mod constants;
 pub mod geotiff_panel;
 pub mod hud;
 pub mod load_screen;
+pub mod mesh_panel;
 pub mod progress;
 pub mod resources;
 pub mod systems;
@@ -34,7 +44,12 @@ impl Plugin for UiPlugin {
             )
             .add_systems(
                 Update,
-                (geotiff_panel::geotiff_panel, hud::hud).run_if(in_state(AppState::Previewing)),
+                (
+                    hud::hud,
+                    geotiff_panel::geotiff_panel.run_if(source_is_heightmap),
+                    mesh_panel::mesh_panel.run_if(source_is_mesh),
+                )
+                    .run_if(in_state(AppState::Previewing)),
             );
     }
 }

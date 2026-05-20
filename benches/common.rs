@@ -5,7 +5,7 @@
 use voxit::source::{RawVolume, ThresholdConfig};
 use voxit::ui::resources::{BiomeMode, PreviewSettings};
 use voxit::visibility::VisibilityMask;
-use voxit::volume::{build_from_geotiff, VoxelGrid};
+use voxit::volume::{build_from_geotiff, MeshColorMode, VoxelGrid};
 
 const SECS_PER_DEG: f32 = 3600.0;
 
@@ -44,6 +44,11 @@ pub fn settings_for(grid: &VoxelGrid) -> PreviewSettings {
         sea_level_m: grid.elev_min,
         vertical_exaggeration: grid.vertical_exaggeration,
         biome_mode: BiomeMode::Elevation,
+        mesh_voxels_per_axis: 64,
+        mesh_yaw_quarters: 0,
+        mesh_pitch_quarters: 0,
+        mesh_color_mode: MeshColorMode::Auto,
+        mesh_longest_axis_m: 1.0,
     }
 }
 

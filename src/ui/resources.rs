@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::volume::MeshColorMode;
+
 #[derive(Resource, Debug, Clone)]
 pub struct PreviewSettings {
     pub density_m_per_voxel: f32,
@@ -14,6 +16,12 @@ pub struct PreviewSettings {
     pub sea_level_m: f32,
     pub vertical_exaggeration: f32,
     pub biome_mode: BiomeMode,
+    // Mesh-specific fields (ignored for heightmap source).
+    pub mesh_voxels_per_axis: u32,
+    pub mesh_yaw_quarters: u32,
+    pub mesh_pitch_quarters: u32,
+    pub mesh_color_mode: MeshColorMode,
+    pub mesh_longest_axis_m: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
