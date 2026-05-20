@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use rayon::prelude::*;
 
 use crate::classify::classify_band;
 use crate::source::{RawVolume, ThresholdConfig};
@@ -58,26 +59,31 @@ pub fn build_from_geotiff(
     let total = slice_stride * (dims[2] as usize);
     let mut data = vec![0u8; total];
 
-    for vz in 0..dims[2] as usize {
-        for vx in 0..dims[0] as usize {
-            let raw_x = ((vx as f32 + 0.5) * density / pixel_spacing_m).floor() as usize;
-            let raw_z = ((vz as f32 + 0.5) * density / pixel_spacing_m).floor() as usize;
-            let raw_x = raw_x.min(raw_w - 1);
-            let raw_z = raw_z.min(raw_h - 1);
-            let elev = raw.data[raw_z * raw_w + raw_x];
-            if !elev.is_finite() {
-                continue;
+    // Parallelize by Z-slab. Each slab fills independently; no inter-slab
+    // dependencies because grid layout is x + dx*y + dx*dy*z.
+    data.par_chunks_mut(slice_stride)
+        .enumerate()
+        .for_each(|(vz, slab)| {
+            for vx in 0..dims[0] as usize {
+                let raw_x = ((vx as f32 + 0.5) * density / pixel_spacing_m).floor() as usize;
+                let raw_z = ((vz as f32 + 0.5) * density / pixel_spacing_m).floor() as usize;
+                let raw_x = raw_x.min(raw_w - 1);
+                let raw_z = raw_z.min(raw_h - 1);
+                let elev = raw.data[raw_z * raw_w + raw_x];
+                if !elev.is_finite() {
+                    continue;
+                }
+                let scaled = (elev - elev_min) * vertical_exaggeration;
+                let y_top = (scaled / density).round().clamp(0.0, dims[1] as f32) as u32;
+                for iy in 0..y_top {
+                    let cell_elev =
+                        elev_min + (iy as f32 * density) / vertical_exaggeration.max(1e-6);
+                    let band = classify_band(cell_elev, elev_min, elev_max);
+                    let idx = vx + row_stride * (iy as usize);
+                    slab[idx] = band;
+                }
             }
-            let scaled = (elev - elev_min) * vertical_exaggeration;
-            let y_top = (scaled / density).round().clamp(0.0, dims[1] as f32) as u32;
-            for iy in 0..y_top {
-                let cell_elev = elev_min + (iy as f32 * density) / vertical_exaggeration.max(1e-6);
-                let band = classify_band(cell_elev, elev_min, elev_max);
-                let idx = vx + row_stride * (iy as usize) + slice_stride * vz;
-                data[idx] = band;
-            }
-        }
-    }
+        });
 
     VoxelGrid {
         data,

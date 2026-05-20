@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bitvec::prelude::*;
+use rayon::prelude::*;
 
 use crate::ui::resources::PreviewSettings;
 use crate::volume::VoxelGrid;
@@ -16,35 +17,53 @@ impl VisibilityMask {
         let dx = grid.dims[0] as usize;
         let dy = grid.dims[1] as usize;
         let dz = grid.dims[2] as usize;
-        let mut bits = BitVec::with_capacity(dx * dy * dz);
-        let mut visible_count = 0u32;
+        let slab = dx * dy;
+        let total = slab * dz;
 
         let cx0 = (settings.crop_x[0].clamp(0.0, 1.0) * dx as f32).floor() as usize;
-        let cx1 = (settings.crop_x[1].clamp(0.0, 1.0) * dx as f32).ceil() as usize;
+        let cx1 = ((settings.crop_x[1].clamp(0.0, 1.0) * dx as f32).ceil() as usize).min(dx);
         let cy0 = (settings.crop_y[0].clamp(0.0, 1.0) * dy as f32).floor() as usize;
-        let cy1 = (settings.crop_y[1].clamp(0.0, 1.0) * dy as f32).ceil() as usize;
+        let cy1 = ((settings.crop_y[1].clamp(0.0, 1.0) * dy as f32).ceil() as usize).min(dy);
         let cz0 = (settings.crop_z[0].clamp(0.0, 1.0) * dz as f32).floor() as usize;
-        let cz1 = (settings.crop_z[1].clamp(0.0, 1.0) * dz as f32).ceil() as usize;
-        let cx1 = cx1.min(dx);
-        let cy1 = cy1.min(dy);
-        let cz1 = cz1.min(dz);
+        let cz1 = ((settings.crop_z[1].clamp(0.0, 1.0) * dz as f32).ceil() as usize).min(dz);
 
-        for z in 0..dz {
-            for y in 0..dy {
-                for x in 0..dx {
-                    let cell = grid.data[x + dx * y + dx * dy * z];
-                    let in_crop =
-                        x >= cx0 && x < cx1 && y >= cy0 && y < cy1 && z >= cz0 && z < cz1;
+        let mut flat = vec![false; total];
+        let visible_count: u32 = flat
+            .par_chunks_mut(slab)
+            .enumerate()
+            .map(|(z, out)| {
+                if z < cz0 || z >= cz1 {
+                    return 0u32;
+                }
+                let src_z_off = z * slab;
+                let mut local = 0u32;
+                for y in cy0..cy1 {
                     let cell_elev = grid.elev_min + (y as f32) * grid.density;
-                    let elev_ok = cell_elev >= settings.threshold_min
-                        && cell_elev <= settings.threshold_max
-                        && cell_elev >= settings.sea_level_m;
-                    let visible = cell != 0 && in_crop && elev_ok;
-                    bits.push(visible);
-                    if visible {
-                        visible_count += 1;
+                    if cell_elev < settings.threshold_min
+                        || cell_elev > settings.threshold_max
+                        || cell_elev < settings.sea_level_m
+                    {
+                        continue;
+                    }
+                    let row_off = y * dx;
+                    let src_row = src_z_off + row_off;
+                    let dst_row = row_off;
+                    for x in cx0..cx1 {
+                        let cell = grid.data[src_row + x];
+                        if cell != 0 {
+                            out[dst_row + x] = true;
+                            local += 1;
+                        }
                     }
                 }
+                local
+            })
+            .sum();
+
+        let mut bits = BitVec::repeat(false, total);
+        for (i, &v) in flat.iter().enumerate() {
+            if v {
+                bits.set(i, true);
             }
         }
 

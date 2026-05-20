@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_asset::RenderAssetUsages;
+use rayon::prelude::*;
 
 use crate::visibility::VisibilityMask;
 use crate::volume::VoxelGrid;
@@ -76,47 +77,35 @@ struct Face {
     corners: [[f32; 3]; 4],
 }
 
+#[derive(Default)]
+struct SlabBuffers {
+    positions: Vec<[f32; 3]>,
+    normals: Vec<[f32; 3]>,
+    colors: Vec<[f32; 4]>,
+    indices: Vec<u32>,
+}
+
 pub fn build_surface_mesh(grid: &VoxelGrid, mask: &VisibilityMask) -> Mesh {
     let dims = grid.dims;
-    let est_voxels = (dims[0] as usize) * (dims[1] as usize) * (dims[2] as usize);
+    let slabs: Vec<SlabBuffers> = (0..dims[2] as i32)
+        .into_par_iter()
+        .map(|z| build_slab(z, grid, mask))
+        .collect();
 
-    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(est_voxels / 8);
-    let mut normals: Vec<[f32; 3]> = Vec::with_capacity(est_voxels / 8);
-    let mut colors: Vec<[f32; 4]> = Vec::with_capacity(est_voxels / 8);
-    let mut indices: Vec<u32> = Vec::with_capacity(est_voxels / 8);
+    let total_positions: usize = slabs.iter().map(|s| s.positions.len()).sum();
+    let total_indices: usize = slabs.iter().map(|s| s.indices.len()).sum();
 
-    for z in 0..dims[2] {
-        for y in 0..dims[1] {
-            for x in 0..dims[0] {
-                if !mask.is_visible(x as i32, y as i32, z as i32) {
-                    continue;
-                }
-                let band = grid.get(x, y, z);
-                let color = band_linear(band);
-                let origin = [x as f32, y as f32, z as f32];
+    let mut positions: Vec<[f32; 3]> = Vec::with_capacity(total_positions);
+    let mut normals: Vec<[f32; 3]> = Vec::with_capacity(total_positions);
+    let mut colors: Vec<[f32; 4]> = Vec::with_capacity(total_positions);
+    let mut indices: Vec<u32> = Vec::with_capacity(total_indices);
 
-                for face in &FACES {
-                    let nx = x as i32 + face.offset[0];
-                    let ny = y as i32 + face.offset[1];
-                    let nz = z as i32 + face.offset[2];
-                    if mask.is_visible(nx, ny, nz) {
-                        continue;
-                    }
-
-                    let base = positions.len() as u32;
-                    for corner in &face.corners {
-                        positions.push([
-                            origin[0] + corner[0],
-                            origin[1] + corner[1],
-                            origin[2] + corner[2],
-                        ]);
-                        normals.push(face.normal);
-                        colors.push(color);
-                    }
-                    indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
-                }
-            }
-        }
+    for slab in slabs {
+        let base = positions.len() as u32;
+        positions.extend(slab.positions);
+        normals.extend(slab.normals);
+        colors.extend(slab.colors);
+        indices.extend(slab.indices.into_iter().map(|i| i + base));
     }
 
     let mut mesh = Mesh::new(
@@ -128,4 +117,44 @@ pub fn build_surface_mesh(grid: &VoxelGrid, mask: &VisibilityMask) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
     mesh.insert_indices(Indices::U32(indices));
     mesh
+}
+
+fn build_slab(z: i32, grid: &VoxelGrid, mask: &VisibilityMask) -> SlabBuffers {
+    let dims = grid.dims;
+    let mut buf = SlabBuffers::default();
+
+    for y in 0..dims[1] {
+        for x in 0..dims[0] {
+            if !mask.is_visible(x as i32, y as i32, z) {
+                continue;
+            }
+            let band = grid.get(x, y, z as u32);
+            let color = band_linear(band);
+            let origin = [x as f32, y as f32, z as f32];
+
+            for face in &FACES {
+                let nx = x as i32 + face.offset[0];
+                let ny = y as i32 + face.offset[1];
+                let nz = z + face.offset[2];
+                if mask.is_visible(nx, ny, nz) {
+                    continue;
+                }
+
+                let base = buf.positions.len() as u32;
+                for corner in &face.corners {
+                    buf.positions.push([
+                        origin[0] + corner[0],
+                        origin[1] + corner[1],
+                        origin[2] + corner[2],
+                    ]);
+                    buf.normals.push(face.normal);
+                    buf.colors.push(color);
+                }
+                buf.indices
+                    .extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            }
+        }
+    }
+
+    buf
 }
