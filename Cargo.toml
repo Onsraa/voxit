@@ -3,6 +3,14 @@ name    = "voxit"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "voxit"
+path = "src/lib.rs"
+
+[[bin]]
+name = "voxit"
+path = "src/main.rs"
+
 [dependencies]
 bevy                 = "0.14"
 bevy_egui            = "0.28"
@@ -14,6 +22,21 @@ dot_vox              = "5"
 bitvec               = "1"
 anyhow               = "1"
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name    = "visibility"
+harness = false
+
+[[bench]]
+name    = "surface_mesh"
+harness = false
+
+[[bench]]
+name    = "volume"
+harness = false
+
 [profile.dev]
 opt-level = 1
 
@@ -21,5 +44,9 @@ opt-level = 1
 opt-level = 3
 
 [profile.release]
+opt-level = 3
+lto       = "thin"
+
+[profile.bench]
 opt-level = 3
 lto       = "thin"

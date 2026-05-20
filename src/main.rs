@@ -3,22 +3,12 @@ use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_file_dialog::prelude::*;
 
-mod classify;
-mod export;
-mod render;
-mod source;
-mod state;
-mod tasks;
-mod ui;
-mod visibility;
-mod volume;
-
-use export::{ExportPlugin, VoxFileSaver};
-use render::RenderPlugin;
-use source::SourcePlugin;
-use state::AppState;
-use ui::load_screen::VolumeFilePicker;
-use ui::UiPlugin;
+use voxit::export::{ExportPlugin, VoxFileSaver};
+use voxit::render::RenderPlugin;
+use voxit::source::SourcePlugin;
+use voxit::state::AppState;
+use voxit::ui::load_screen::VolumeFilePicker;
+use voxit::ui::UiPlugin;
 
 fn main() {
     App::new()
