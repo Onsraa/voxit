@@ -1,27 +1,16 @@
-# voxel-viewer
+# voxit
 
-Bevy desktop app that converts **DICOM medical scans** or **GeoTIFF elevation
-tiles** into **MagicaVoxel `.vox` files** with a live 3D preview.
+Drop a DICOM scan or GeoTIFF elevation tile, voxelize it live, export a MagicaVoxel `.vox`.
 
-Adjust voxel density, threshold, and crop with sliders. Export a single-model
-or chunked multi-model `.vox` consumable by MagicaVoxel or a downstream
-voxel-aware engine.
+Bevy 0.14 desktop app. Pan-orbit 3D preview. Side panel sliders: voxel size, threshold, sea level, crop X/Y/Z, vertical exaggeration. Single-model export today; chunked multi-model and DICOM source come later.
 
-## Status
-
-Phase 0 — project boot. See `TODO.md` for the roadmap and current phase.
-
-## Build
+## Run
 
 ```bash
 cargo run --release
 ```
 
-## Documentation
-
-- `docs/DESIGN.md` — full design spec
-- `TODO.md` — phased roadmap
-- `CLAUDE.md` — context for AI-assisted development
+Drag a `.tif` onto the window or pick one. Tweak. Click Export `.vox`.
 
 ## License
 
