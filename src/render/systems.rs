@@ -2,19 +2,23 @@ use std::time::Duration;
 
 use bevy::pbr::{AmbientLight, DirectionalLight, DirectionalLightBundle};
 use bevy::prelude::*;
+use bevy::tasks::futures_lite::future;
 use bevy_panorbit_camera::PanOrbitCamera;
 
 use crate::source::geotiff::GeoTiffSource;
 use crate::source::mesh::MeshData;
 use crate::source::{RawVolume, SourceData, VolumeSource};
+use crate::tasks::spawn_async;
 use crate::ui::resources::{
-    BiomeMode, MeshDirty, PreviewSettings, PreviewStats, VolumeDebounce, VolumeDirty,
+    MeshDirty, MeshRebuildPending, PreviewSettings, PreviewStats, VolumeDebounce, VolumeDirty,
 };
 use crate::visibility::VisibilityMask;
 use crate::volume::estimate_pixel_spacing_m;
 use crate::volume::{build_from_geotiff, build_from_mesh, MeshColorMode, VoxelGrid};
 
-use super::components::{PreviewCamera, PreviewLight, PreviewMesh};
+use super::components::{
+    MeshRebuildResult, MeshRebuildTask, PreviewCamera, PreviewLight, PreviewMesh,
+};
 use super::constants::{
     AMBIENT_BRIGHTNESS, AMBIENT_COLOR, CLEAR_COLOR, DEFAULT_DENSITY_M_PER_VOXEL,
     LIGHT_EULER_PITCH, LIGHT_EULER_YAW, LIGHT_ILLUMINANCE,
@@ -137,7 +141,6 @@ fn build_heightmap_preview(raw: &RawVolume) -> (VoxelGrid, PreviewSettings, [f32
         grid_dims: grid.dims,
         sea_level_m: thresholds.min,
         vertical_exaggeration: vert_exag,
-        biome_mode: BiomeMode::Elevation,
         mesh_voxels_per_axis: 64,
         mesh_yaw_quarters: 0,
         mesh_pitch_quarters: 0,
@@ -182,7 +185,6 @@ fn build_mesh_preview(mesh: &MeshData) -> (VoxelGrid, PreviewSettings, [f32; 3])
         grid_dims: grid.dims,
         sea_level_m: elev_min,
         vertical_exaggeration: 1.0,
-        biome_mode: BiomeMode::Elevation,
         mesh_voxels_per_axis: voxels_per_axis,
         mesh_yaw_quarters: 0,
         mesh_pitch_quarters: 0,
@@ -215,36 +217,80 @@ pub fn teardown_preview(
     debounce.timer = None;
 }
 
-pub fn rebuild_mesh_on_dirty(
+pub fn schedule_mesh_rebuild(
+    mut commands: Commands,
     mut events: EventReader<MeshDirty>,
     grid: Option<Res<VoxelGrid>>,
     settings: Option<Res<PreviewSettings>>,
-    mask: Option<ResMut<VisibilityMask>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mesh_query: Query<&Handle<Mesh>, With<PreviewMesh>>,
-    mut stats: ResMut<PreviewStats>,
+    in_flight: Query<&MeshRebuildTask>,
+    mut pending: ResMut<MeshRebuildPending>,
 ) {
     if events.is_empty() {
         return;
     }
     events.clear();
+
+    if !in_flight.is_empty() {
+        // A rebuild is already running. Mark that the latest settings are not
+        // yet reflected — the poll system will re-fire MeshDirty on
+        // completion so the final slider position always gets applied.
+        pending.0 = true;
+        return;
+    }
+
     let Some(grid) = grid else { return };
     let Some(settings) = settings else { return };
-    let Some(mut mask) = mask else { return };
-    let Ok(handle) = mesh_query.get_single() else {
-        return;
-    };
+    let grid_clone = grid.clone();
+    let settings_clone = settings.clone();
+    pending.0 = false;
 
-    mask.recompute(&grid, &settings);
-    let mesh = build_surface_mesh(&grid, &mask);
-    let triangle_count = (mesh.indices().map(|i| i.len()).unwrap_or(0) / 3) as u32;
-    *stats = PreviewStats {
-        visible_voxels: mask.visible_count(),
-        triangle_count,
-    };
+    let task = spawn_async(move || {
+        let mut mask = VisibilityMask::new_empty();
+        mask.recompute(&grid_clone, &settings_clone);
+        let mesh = build_surface_mesh(&grid_clone, &mask);
+        let triangle_count = (mesh.indices().map(|i| i.len()).unwrap_or(0) / 3) as u32;
+        MeshRebuildResult {
+            mesh,
+            mask,
+            triangle_count,
+        }
+    });
+    commands.spawn(MeshRebuildTask(task));
+}
 
-    if let Some(slot) = meshes.get_mut(handle) {
-        *slot = mesh;
+pub fn poll_mesh_rebuild(
+    mut commands: Commands,
+    mut tasks: Query<(Entity, &mut MeshRebuildTask)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mesh_query: Query<&Handle<Mesh>, With<PreviewMesh>>,
+    mut stats: ResMut<PreviewStats>,
+    mut pending: ResMut<MeshRebuildPending>,
+    mut mesh_events: EventWriter<MeshDirty>,
+) {
+    for (entity, mut task) in &mut tasks {
+        let Some(result) = future::block_on(future::poll_once(&mut task.0)) else {
+            continue;
+        };
+        let Ok(handle) = mesh_query.get_single() else {
+            commands.entity(entity).despawn();
+            continue;
+        };
+
+        *stats = PreviewStats {
+            visible_voxels: result.mask.visible_count(),
+            triangle_count: result.triangle_count,
+        };
+
+        if let Some(slot) = meshes.get_mut(handle) {
+            *slot = result.mesh;
+        }
+        commands.insert_resource(result.mask);
+        commands.entity(entity).despawn();
+
+        if pending.0 {
+            pending.0 = false;
+            mesh_events.send(MeshDirty);
+        }
     }
 }
 

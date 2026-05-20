@@ -15,21 +15,12 @@ pub struct PreviewSettings {
     pub grid_dims: [u32; 3],
     pub sea_level_m: f32,
     pub vertical_exaggeration: f32,
-    pub biome_mode: BiomeMode,
     // Mesh-specific fields (ignored for heightmap source).
     pub mesh_voxels_per_axis: u32,
     pub mesh_yaw_quarters: u32,
     pub mesh_pitch_quarters: u32,
     pub mesh_color_mode: MeshColorMode,
     pub mesh_longest_axis_m: f32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum BiomeMode {
-    #[default]
-    Elevation,
-    Slope,
-    Flat,
 }
 
 #[derive(Resource, Debug, Default, Clone, Copy)]
@@ -48,6 +39,12 @@ pub struct VolumeDirty;
 pub struct VolumeDebounce {
     pub timer: Option<Timer>,
 }
+
+/// Set when a `MeshDirty` arrived while a mesh-rebuild task was still in
+/// flight. The polling system re-fires `MeshDirty` on completion if this is
+/// set so the latest slider position always ends up applied.
+#[derive(Resource, Debug, Default)]
+pub struct MeshRebuildPending(pub bool);
 
 #[derive(Resource, Debug, Default)]
 pub struct LastLoadError {

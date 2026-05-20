@@ -3,7 +3,7 @@ use bevy_egui::{egui, EguiContexts};
 
 use crate::export::ExportRequested;
 
-use super::resources::{BiomeMode, MeshDirty, PreviewSettings, VolumeDirty};
+use super::resources::{MeshDirty, PreviewSettings, VolumeDirty};
 
 const PANEL_WIDTH: f32 = 280.0;
 
@@ -41,47 +41,6 @@ pub fn geotiff_panel(
             ui.label("Vertical exaggeration");
             let r = ui.add(egui::Slider::new(&mut settings.vertical_exaggeration, 0.1..=10.0));
             if r.changed() {
-                volume_dirty = true;
-            }
-
-            ui.add_space(10.0);
-            ui.label("Elevation threshold (m)");
-            let lo = settings.elev_full_min;
-            let hi = settings.elev_full_max;
-            let r = ui.add(egui::Slider::new(&mut settings.threshold_min, lo..=hi));
-            if r.changed() {
-                if settings.threshold_min > settings.threshold_max {
-                    settings.threshold_min = settings.threshold_max;
-                }
-                mesh_dirty = true;
-            }
-            let r = ui.add(egui::Slider::new(&mut settings.threshold_max, lo..=hi));
-            if r.changed() {
-                if settings.threshold_max < settings.threshold_min {
-                    settings.threshold_max = settings.threshold_min;
-                }
-                mesh_dirty = true;
-            }
-
-            ui.add_space(6.0);
-            ui.label("Sea level (m)");
-            let r = ui.add(egui::Slider::new(&mut settings.sea_level_m, lo..=hi));
-            if r.changed() {
-                mesh_dirty = true;
-            }
-
-            ui.add_space(10.0);
-            ui.label("Biome mode");
-            let mut mode = settings.biome_mode;
-            egui::ComboBox::from_id_source("biome-mode")
-                .selected_text(format!("{:?}", mode))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut mode, BiomeMode::Elevation, "Elevation");
-                    ui.selectable_value(&mut mode, BiomeMode::Slope, "Slope");
-                    ui.selectable_value(&mut mode, BiomeMode::Flat, "Flat");
-                });
-            if mode != settings.biome_mode {
-                settings.biome_mode = mode;
                 volume_dirty = true;
             }
 

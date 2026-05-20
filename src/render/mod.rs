@@ -21,7 +21,8 @@ impl Plugin for RenderPlugin {
             .add_systems(
                 Update,
                 (
-                    systems::rebuild_mesh_on_dirty,
+                    systems::schedule_mesh_rebuild,
+                    systems::poll_mesh_rebuild,
                     systems::volume_dirty_starts_debounce,
                     systems::rebuild_volume_after_debounce,
                 )

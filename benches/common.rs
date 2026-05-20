@@ -3,7 +3,7 @@
 // fixture.
 
 use voxit::source::{RawVolume, ThresholdConfig};
-use voxit::ui::resources::{BiomeMode, PreviewSettings};
+use voxit::ui::resources::PreviewSettings;
 use voxit::visibility::VisibilityMask;
 use voxit::volume::{build_from_geotiff, MeshColorMode, VoxelGrid};
 
@@ -43,7 +43,6 @@ pub fn settings_for(grid: &VoxelGrid) -> PreviewSettings {
         grid_dims: grid.dims,
         sea_level_m: grid.elev_min,
         vertical_exaggeration: grid.vertical_exaggeration,
-        biome_mode: BiomeMode::Elevation,
         mesh_voxels_per_axis: 64,
         mesh_yaw_quarters: 0,
         mesh_pitch_quarters: 0,

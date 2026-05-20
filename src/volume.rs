@@ -5,7 +5,7 @@ use crate::classify::{classify_band, BAND_COUNT};
 use crate::source::mesh::MeshData;
 use crate::source::{RawVolume, ThresholdConfig};
 
-#[derive(Resource, Debug)]
+#[derive(Resource, Debug, Clone)]
 pub struct VoxelGrid {
     pub data: Vec<u8>,
     pub dims: [u32; 3],
