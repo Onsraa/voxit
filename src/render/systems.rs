@@ -161,7 +161,7 @@ pub fn rebuild_mesh_on_dirty(
     mut events: EventReader<MeshDirty>,
     grid: Option<Res<VoxelGrid>>,
     settings: Option<Res<PreviewSettings>>,
-    mut commands: Commands,
+    mask: Option<ResMut<VisibilityMask>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mesh_query: Query<&Handle<Mesh>, With<PreviewMesh>>,
     mut stats: ResMut<PreviewStats>,
@@ -172,11 +172,12 @@ pub fn rebuild_mesh_on_dirty(
     events.clear();
     let Some(grid) = grid else { return };
     let Some(settings) = settings else { return };
+    let Some(mut mask) = mask else { return };
     let Ok(handle) = mesh_query.get_single() else {
         return;
     };
 
-    let mask = VisibilityMask::compute(&grid, &settings);
+    mask.recompute(&grid, &settings);
     let mesh = build_surface_mesh(&grid, &mask);
     let triangle_count = (mesh.indices().map(|i| i.len()).unwrap_or(0) / 3) as u32;
     *stats = PreviewStats {
@@ -187,7 +188,6 @@ pub fn rebuild_mesh_on_dirty(
     if let Some(slot) = meshes.get_mut(handle) {
         *slot = mesh;
     }
-    commands.insert_resource(mask);
 }
 
 pub fn volume_dirty_starts_debounce(
@@ -209,6 +209,7 @@ pub fn rebuild_volume_after_debounce(
     mut debounce: ResMut<VolumeDebounce>,
     raw: Option<Res<RawVolume>>,
     settings: Option<Res<PreviewSettings>>,
+    mask: Option<ResMut<VisibilityMask>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_query: Query<(&Handle<Mesh>, &mut Transform), With<PreviewMesh>>,
@@ -227,6 +228,7 @@ pub fn rebuild_volume_after_debounce(
     let Some(mut settings_owned) = settings.map(|s| s.clone()) else {
         return;
     };
+    let Some(mut mask) = mask else { return };
     let Ok((handle, mut transform)) = mesh_query.get_single_mut() else {
         return;
     };
@@ -244,7 +246,7 @@ pub fn rebuild_volume_after_debounce(
 
     settings_owned.grid_dims = grid.dims;
 
-    let mask = VisibilityMask::compute(&grid, &settings_owned);
+    mask.recompute(&grid, &settings_owned);
     let mesh = build_surface_mesh(&grid, &mask);
     let triangle_count = (mesh.indices().map(|i| i.len()).unwrap_or(0) / 3) as u32;
     *stats = PreviewStats {
@@ -257,6 +259,5 @@ pub fn rebuild_volume_after_debounce(
     }
     transform.scale = Vec3::splat(settings_owned.density_m_per_voxel);
     commands.insert_resource(grid);
-    commands.insert_resource(mask);
     commands.insert_resource(settings_owned);
 }

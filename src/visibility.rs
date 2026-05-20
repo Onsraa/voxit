@@ -1,19 +1,32 @@
 use bevy::prelude::*;
-use bitvec::prelude::*;
 use rayon::prelude::*;
 
 use crate::ui::resources::PreviewSettings;
 use crate::volume::VoxelGrid;
 
-#[derive(Resource)]
+/// Per-cell visibility flags. One `u8` per cell (0 hidden, 1 visible) instead
+/// of a bit-packed BitVec — wastes 8× memory but lets every cell be written
+/// independently from rayon workers and removes the sequential collapse pass.
+/// The buffer is reused across rebuilds via `recompute`.
+#[derive(Resource, Default)]
 pub struct VisibilityMask {
-    bits: BitVec,
+    flat: Vec<u8>,
     dims: [u32; 3],
     visible_count: u32,
 }
 
 impl VisibilityMask {
+    pub fn new_empty() -> Self {
+        Self::default()
+    }
+
     pub fn compute(grid: &VoxelGrid, settings: &PreviewSettings) -> Self {
+        let mut mask = Self::new_empty();
+        mask.recompute(grid, settings);
+        mask
+    }
+
+    pub fn recompute(&mut self, grid: &VoxelGrid, settings: &PreviewSettings) {
         let dx = grid.dims[0] as usize;
         let dy = grid.dims[1] as usize;
         let dz = grid.dims[2] as usize;
@@ -27,8 +40,14 @@ impl VisibilityMask {
         let cz0 = (settings.crop_z[0].clamp(0.0, 1.0) * dz as f32).floor() as usize;
         let cz1 = ((settings.crop_z[1].clamp(0.0, 1.0) * dz as f32).ceil() as usize).min(dz);
 
-        let mut flat = vec![false; total];
-        let visible_count: u32 = flat
+        // Reuse the existing storage. resize zero-pads to total length, keeping
+        // capacity if it was already large enough.
+        self.flat.clear();
+        self.flat.resize(total, 0);
+        self.dims = grid.dims;
+
+        let visible_count: u32 = self
+            .flat
             .par_chunks_mut(slab)
             .enumerate()
             .map(|(z, out)| {
@@ -49,9 +68,8 @@ impl VisibilityMask {
                     let src_row = src_z_off + row_off;
                     let dst_row = row_off;
                     for x in cx0..cx1 {
-                        let cell = grid.data[src_row + x];
-                        if cell != 0 {
-                            out[dst_row + x] = true;
+                        if grid.data[src_row + x] != 0 {
+                            out[dst_row + x] = 1;
                             local += 1;
                         }
                     }
@@ -60,18 +78,7 @@ impl VisibilityMask {
             })
             .sum();
 
-        let mut bits = BitVec::repeat(false, total);
-        for (i, &v) in flat.iter().enumerate() {
-            if v {
-                bits.set(i, true);
-            }
-        }
-
-        Self {
-            bits,
-            dims: grid.dims,
-            visible_count,
-        }
+        self.visible_count = visible_count;
     }
 
     pub fn visible_count(&self) -> u32 {
@@ -91,6 +98,6 @@ impl VisibilityMask {
         let idx = (x as usize)
             + (self.dims[0] as usize) * (y as usize)
             + (self.dims[0] as usize) * (self.dims[1] as usize) * (z as usize);
-        *self.bits.get(idx).unwrap()
+        self.flat[idx] != 0
     }
 }

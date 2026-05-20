@@ -19,7 +19,6 @@ bevy_file_dialog     = "0.6"
 
 tiff                 = "0.9"
 dot_vox              = "5"
-bitvec               = "1"
 anyhow               = "1"
 rayon                = "1"
 
